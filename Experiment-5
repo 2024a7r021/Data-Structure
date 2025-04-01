@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -138,7 +139,7 @@ char* convertPostfixToInfix(char *exp)
 }
 char* convertPrefixToInfix(char *exp)
 {
-    int size = strlen(exp), top=-1;
+    int size = strlen(exp),i, top=-1;
     char stack[size][100];
     for(int i=size-1; i>=0; i--);
     {
