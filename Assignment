@@ -1,0 +1,239 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define NUM_ACCOUNTS 4
+#define MAX_LOGIN_ATTEMPTS 3
+#define MAX_TXN_ATTEMPTS 3
+#define MAX_WITHDRAW 20000
+#define MAX_DEPOSIT 50000
+#define MAX_TRANSACTIONS 5
+
+// User data
+int userIds[NUM_ACCOUNTS] = {101, 102, 103, 104};
+int loginPins[NUM_ACCOUNTS] = {1231, 2342, 3453, 4564};
+int transactionPins[NUM_ACCOUNTS] = {1111, 2222, 3333, 4444};
+float balances[NUM_ACCOUNTS] = {10000.0, 12000.5, 5000.0, 7500.75};
+
+// Transaction history
+char transactions[NUM_ACCOUNTS][MAX_TRANSACTIONS][100];
+int transactionIndex[NUM_ACCOUNTS] = {0};
+
+// Record a transaction
+void recordTransaction(int userIndex, const char* type, float amount) 
+{
+    char transactionText[100];
+    snprintf(transactionText, sizeof(transactionText), "%s: $%.2f | Balance: $%.2f", type, amount, balances[userIndex]);
+    strcpy(transactions[userIndex][transactionIndex[userIndex]], transactionText);
+    transactionIndex[userIndex] = (transactionIndex[userIndex] + 1) % MAX_TRANSACTIONS;
+}
+
+// Verify transaction PIN
+int verifyTransactionPin(int userIndex) 
+{
+    int enteredPin, attempts = 0;
+
+    while (attempts < MAX_TXN_ATTEMPTS) 
+    {
+        printf("Enter your Transaction PIN: ");
+        scanf("%d", &enteredPin);
+
+        if (enteredPin == transactionPins[userIndex]) 
+        {
+            return 1;
+        } 
+        else 
+        {
+            attempts++;
+            if (attempts < MAX_TXN_ATTEMPTS) 
+            {
+                printf("Incorrect Transaction PIN. Attempts left: %d\n", MAX_TXN_ATTEMPTS - attempts);
+            } 
+            else 
+            {
+                printf("Maximum attempts reached. Access to this operation denied.\n");
+            }
+        }
+    }
+    return 0;
+}
+
+// Show mini statement
+void showMiniStatement(int userIndex) 
+{
+    printf("\n=== Mini Statement (Last 5 Transactions) ===\n");
+    int index = transactionIndex[userIndex];
+    for (int i = 0; i < MAX_TRANSACTIONS; i++) 
+    {
+        int pos = (index + i) % MAX_TRANSACTIONS;
+        if (strlen(transactions[userIndex][pos]) > 0)
+        {
+            printf("%d. %s\n", i + 1, transactions[userIndex][pos]);
+        }
+    }
+}
+
+// Change transaction PIN
+void changeTransactionPin(int userIndex) 
+{
+    int oldPin, newPin;
+    printf("\nEnter current Transaction PIN: ");
+    scanf("%d", &oldPin);
+
+    if (oldPin == transactionPins[userIndex]) 
+    {
+        printf("Enter new Transaction PIN: ");
+        scanf("%d", &newPin);
+        transactionPins[userIndex] = newPin;
+        printf("Transaction PIN changed successfully.\n");
+    } 
+    else 
+    {
+        printf("Incorrect current PIN. Cannot change.\n");
+    }
+}
+
+// Main function
+int main() 
+{
+    int userIndex = -1;
+    char tryAgain;
+
+    while (1) 
+    {
+        int enteredId, enteredPin, attempts = 0;
+        userIndex = -1;
+
+        while (attempts < MAX_LOGIN_ATTEMPTS) 
+        {
+            printf("\n==== ATM Login ====\n");
+            printf("Enter User ID: ");
+            scanf("%d", &enteredId);
+            printf("Enter Login PIN: ");
+            scanf("%d", &enteredPin);
+
+            for (int i = 0; i < NUM_ACCOUNTS; i++) 
+            {
+                if (userIds[i] == enteredId && loginPins[i] == enteredPin) 
+                {
+                    userIndex = i;
+                    printf("\nLogin successful! Welcome, User %d.\n", enteredId);
+                    break;
+                }
+            }
+
+            if (userIndex != -1) 
+            {
+                break;
+            }
+
+            attempts++;
+            if (attempts < MAX_LOGIN_ATTEMPTS) 
+            {
+                printf("Incorrect ID or PIN. Attempts left: %d\n", MAX_LOGIN_ATTEMPTS - attempts);
+            } 
+            else 
+            {
+                printf("Maximum login attempts exceeded. Access blocked.\n");
+            }
+        }
+
+        if (userIndex == -1) 
+        {
+            printf("\nDo you want to try logging in again? (y/n): ");
+            scanf(" %c", &tryAgain);
+            if (tryAgain != 'y' && tryAgain != 'Y') 
+            {
+                printf("\nExiting ATM. Goodbye!\n");
+                break;
+            } 
+            else 
+            {
+                continue;
+            }
+        }
+
+        // ATM operations menu
+        int choice;
+        float amount;
+
+        while (1) 
+        {
+            printf("\n==== ATM Menu ====\n");
+            printf("1. Check Balance\n");
+            printf("2. Deposit Cash\n");
+            printf("3. Withdraw Cash\n");
+            printf("4. Mini Statement\n");
+            printf("5. Change Transaction PIN\n");
+            printf("6. Logout\n");
+            printf("Enter your choice: ");
+            scanf("%d", &choice);
+
+            switch (choice) 
+            {
+                case 1:
+                    if (verifyTransactionPin(userIndex))
+                    {
+                        printf("\nYour current balance is: $%.2f\n", balances[userIndex]);
+                    }
+                    break;
+                case 2:
+                    if (verifyTransactionPin(userIndex)) 
+                    {
+                        printf("Enter amount to deposit (Max $50,000): ");
+                        scanf("%f", &amount);
+                        if (amount > 0 && amount <= MAX_DEPOSIT) 
+                        {
+                            balances[userIndex] += amount;
+                            recordTransaction(userIndex, "Deposit", amount);
+                            printf("Deposit successful. New balance: $%.2f\n", balances[userIndex]);
+                        } 
+                        else 
+                        {
+                            printf("Invalid amount. Deposit must be up to $50,000.\n");
+                        }
+                    }
+                    break;
+                case 3:
+                    if (verifyTransactionPin(userIndex)) 
+                    {
+                        printf("Enter amount to withdraw (Max $20,000 and multiples of 100): ");
+                        scanf("%f", &amount);
+                        if (amount > 0 && (int)amount % 100 == 0 && amount <= MAX_WITHDRAW && amount <= balances[userIndex]) 
+                        {
+                            balances[userIndex] -= amount;
+                            recordTransaction(userIndex, "Withdrawal", amount);
+                            printf("Withdrawal successful. New balance: $%.2f\n", balances[userIndex]);
+                        } 
+                        else 
+                        {
+                            printf("Invalid withdrawal. Must be multiple of 100, <= $20,000, and within balance.\n");
+                        }
+                    }
+                    break;
+                case 4:
+                    showMiniStatement(userIndex);
+                    break;
+                case 5:
+                    changeTransactionPin(userIndex);
+                    break;
+                case 6:
+                    printf("\nLogging out...\n");
+                    break;
+                default:
+                    printf("Invalid choice. Try again.\n");
+            }
+
+            if (choice == 6) break;
+        }
+
+        printf("\nDo you want to try logging in again? (y/n): ");
+        scanf(" %c", &tryAgain);
+        if (tryAgain != 'y' && tryAgain != 'Y') 
+        {
+            printf("\nExiting ATM. Goodbye!!!\n");
+            break;
+        }
+    }
+    return 0;
+}
