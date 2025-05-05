@@ -117,5 +117,7 @@ int main(){
                 printf("Invalid choice\n");
         }
         printf("\n");
+        system("pause");
     }
+    return 0;
 }
